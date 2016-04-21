@@ -4,10 +4,10 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>reveal.js</title>
+		<title>FP in Scala chpt. 3</title>
 
 		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css">
+		<link rel="stylesheet" href="css/theme/serif.css">
 
 		<!-- Theme used for syntax highlighting of code -->
 		<link rel="stylesheet" href="lib/css/zenburn.css">
@@ -20,14 +20,443 @@
 			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
 			document.getElementsByTagName( 'head' )[0].appendChild( link );
 		</script>
+    <style type="text/css">
+      p { text-align: left; }
+    </style>
 	</head>
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
-			</div>
+        <section data-markdown>
+          <script type="text/template">
+            ### Functional Programming in Scala
+            ####Chapter 3
+            ####Apr. 20 2016
+            ####James Yang
+          </script>
+        </section>
+				<section data-markdown>
+          <script type="text/template">
+            ####Variadic Function
+            ```scala
+            def apply[A](as: A*): List[A] = {
+              if (as.isEmpty) Nil else Cons(as.head, apply(as.tail: _*))
+            }
+            ```
+            ####Vararg Expansion
+            ```scala
+            _*
+
+            // vara args is also an List
+
+            apply(as.tail: _*)
+            ```
+          </script>
+        </section>
+				<section data-markdown>
+          <script type="text/template">
+            ####Self-defined `List`
+
+            ```scala
+            sealed trait List[+A]
+            case object Nil extends List[Nothing]
+            case class Cons[+A](head: A, tail: List[A]) extends List[A]
+            ```
+
+            ```scala
+            object List {
+              def sum(ints: List[Int]): Int = ints match {
+                case Nil => 0
+                case Cons(x, xs) => x + sum(xs)
+              }
+
+              def product(ds: List[Double]): Double = ds match {
+                case Nil => 1.0
+                case Cons(0.0, _) => 0.0
+                case Cons(x,xs) => x * product(xs)
+              }
+
+              def apply[A](as: A*): List[A] = {
+                if (as.isEmpty) Nil else Cons(as.head, apply(as.tail: _*))
+              }
+            }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            ####Constructor Function
+
+            ```scala
+            case class Cons[+A](head: A, tail: List[A]) extends List[A]
+
+            // In object List
+            def apply[A](as: A*): List[A] = {
+              if (as.isEmpty) Nil
+              else Cons(as.head, apply(as.tail: _*))
+            }
+            ```
+            ####Parameter Type
+
+            ```scala
+            sealed trait List[+A]
+
+            val ex1: List[Double] = Nil
+            val ex2: List[Int] = Cons(1, Nil)
+            val ex3: List[String] = Cons("a", Cons("b", Nil))
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+          ####Pattern Matching
+
+          ```scala
+          def sum(ints: List[Int]): Int = ints match {
+            case Nil => 0
+            case Cons(x,xs) => x + sum(xs)
+          }
+
+          def product(ds: List[Double]): Double = ds match {
+            case Nil => 1.0
+            case Cons(0.0, _) => 0.0
+            case Cons(x,xs) => x * product(xs)
+          }
+
+          val a = () => { Math.random() * 10 match {
+              case x if x > 5.0 => true
+              case _ => false
+            }
+          }
+          // a: () => Boolean = <function0>
+          ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            ####Pattern Matching
+            ```scala
+            List(1,2,3) match { case _ => 42 }
+            // 42
+
+            List(1,2,3) match { case Cons(h, _) => h }
+            // 1
+            ```
+            #### Exercise 3.1
+            ```scala
+            val x = List(1,2,3,4,5) match {
+              case Cons(x, Cons(2, Cons(4, _))) => x
+              case Nil => 42
+              case Cons(x, Cons(y, Cons(3, Cons(4, _)))) =>
+                x + y case Cons(h, t) => h + sum(t)
+              case _ => 101
+            }
+
+            // 1 + 2 = 3
+            ```
+            ####`case Nil` means `MatchError` at runtime.
+            #### No cases in a match expression matched the target.
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### `tail`
+            #### Returns rest of list except head element
+
+            ```scala
+            def tail[A](as: List[A]): List[A] = as match {
+              case Nil => Nil
+              // bugs in here
+              // case Cons(_, Cons(x, y)) => Cons(x, y)
+              case Cons(_, y) => y
+            }
+            ```
+            #### `setHead`
+            #### Replace the head element
+
+            ```scala
+            def setHead[A](as: List[A], x: A): List[A] = as match {
+              case Nil => Nil
+              case Cons(_, t) => Cons(x, t)
+            }
+            ```
+
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Exercise 3.4 `drop`
+            #### Drop n elements
+            ```scala
+            def drop[A](l: List[A], n: Int): List[A] = n match {
+              case 0 => l
+              case x if x > 0 =>
+                l match {
+                  case Nil => Nil
+                  case Cons(_, t) => drop(tail(l), n - 1)
+                }
+              case _ => Nil
+            }
+            ```
+
+            ```scala
+            def drop_2[A](l: List[A], n: Int): List[A] =
+              if (n <= 0) l
+              else l match {
+                case Nil => Nil
+                case Cons(_, t) => drop(tail(l), n - 1)
+              }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Exercise 3.5 `drop`
+            #### Drop when meet the condition `f`
+            ```scala
+            // Stop when condition from f not hold
+            def dropWhile_1[A](l: List[A], f: A => Boolean): List[A] = l match {
+              case Cons(h, t) if f(h) => dropWhile(t, f)
+              case _ => l
+            }
+            ```
+            ```scala
+            def dropWhile[A](l: List[A], f: A => Boolean): List[A] = l match {
+              case Cons(h, t) =>
+                if (f(h))
+                  dropWhile(drop(l, 1), f)
+                else
+                  if (t == Nil) => dropWhile(t, f) else l
+              case _ => l
+            }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Exercise 3.6 `init`
+            ####Return all but the last element
+
+            ```scala
+            def init[A](l: List[A]): List[A] = l match {
+              case Nil => Nil
+              case Cons(_, Nil) => Nil
+              case Cons(h, t) => Cons(h, init(t))
+            }
+
+            List.init(List(1, 2, 3, 4, 5))
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Exercise 3.7 `foldRight`
+
+            ####Replace `Cons` list to other generic transformation.
+
+            ```scala
+            def foldRight[A,B](as: List[A], z: B)(f: (A, B) => B): B = as match {
+              case Nil => z
+              // lazy evaluation foldRight(xs, z)(f)
+              case Cons(x, xs) => f(x, foldRight(xs, z)(f))
+            }
+
+            foldRight(Cons(1, Cons(2, Cons(3, Nil))), 0)((x,y) => x + y)
+            1 + foldRight(Cons(2, Cons(3, Nil)), 0)((x,y) => x + y)
+            1 + (2 + foldRight(Cons(3, Nil), 0)((x,y) => x + y))
+            1 + (2 + (3 + (foldRight(Nil, 0)((x,y) => x + y))))
+            // Replace foldRight 1 + (2 + (3 + (0))) with its definition.
+            6
+
+            def product2(ns: List[Double]) = foldRight(ns, 1.0)(_ * _)
+
+            // Exercise 3.9
+            def length[A](as: List[A]): Int = foldRight(as, 0)((a, b) => b + 1)
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Exercise 3.10
+            ####`foldLeft` for tail-recursion
+
+            ```scala
+            def foldLeft[A,B](as: List[A], z: B)(f: (B, A) => B): B = as match {
+              case Nil => z
+              case Cons(x, y) => foldLeft(y, f(z, x))(f)
+            }
+
+            List.foldLeft(List(1,2,3), Nil: List[Int])((a, b) => Cons(b, a))
+            // left-expanded
+            Cons(3,Cons(2,Cons(1,Nil)))
+
+            // Exercise 3.11
+            def sumLeft(ints: List[Int]): Int = foldLeft(ints, 0)(_ + _)
+            def productLeft(ns: List[Double]) = foldLeft(ns, 1.0)(_ * _)
+
+            // Exercise 3.12
+            def reverse[A](as: List[A]): List[A] =
+              foldLeft(as, Nil: List[A])((B, A) => Cons(A, B))
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Exercise 3.13
+            ####`foldRightViaFoldLeft`
+            #### A tail-recursion version of `foldRight`
+
+            ```scala
+            def foldRightViaFoldLeft[A,B](as: List[A], z: B)(f: (A, B) => B): B = {
+              foldLeft(reverse(as), z)((d, k) => f(k, d))
+            }
+
+            // Exercise 3.14
+            def append[A](l: List[A], r: List[A]): List[A] =
+              foldRight(l, r)(Cons(_, _))
+
+            // Exercise 3.15
+            def concat[A](l: List[List[A]]): List[A] =
+              foldRight(l, Nil: List[A])(append)
+
+            // Exercise 3.16
+            def add1(l: List[Int]): List[Int] =
+              foldRight(l, Nil: List[Int])((a, b) => Cons(a + 1, b))
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Exercise 3.18 `Map`
+            ```scala
+            // case Cons(x, y) => foldLeft(y, f(z, x))(f)
+            def map[A,B](l: List[A])(f: A => B): List[B] =
+              foldLeft(reverse(l), Nil: List[B])((b, z) => Cons(f(z), b))
+
+            def filter[A](as: List[A])(f: A => Boolean): List[A] = {
+              foldRightViaFoldLeft(as, Nil: List[A])(
+                (a, b) => if (f(a)) Cons(a, b) else b
+              )
+            }
+
+            // Exercise 3.20
+            def flatMap[A,B](as: List[A])(f: A => List[B]): List[B] = {
+              concat(map(as)(f))
+            }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+              #### Tree
+              ```scala
+              sealed trait Tree[+A]
+              case class Leaf[A](value: A) extends Tree[A]
+              case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A]
+
+              def size[A](t: Tree[A]): Int = t match {
+                case Leaf(_) => 1
+                case Branch(l, r) => 1 + size(l) + size(r)
+              }
+
+              def maximum(t: Tree[Int]): Int = t match {
+                case Leaf(x) => x
+                case Branch(l, r) =>
+                  if (maximum(l) > maximum(r)) maximum(l) else maximum(r)
+              }
+              ```
+              ```scala
+              // replace to other pair-wise transformation if possible
+              def fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B = t match {
+                case Leaf(a) => f(a)
+                case Branch(l, r) => g(fold(l)(f)(g), fold(r)(f)(g))
+              }
+
+              def mapFold[A, B](t: Tree[A])(f: A => B): Tree[B] = {
+                // Scala prefer sub type prior than the more general super type.
+                // So we need explicit out Leaf's type to super type
+                // Create Branch for two sub nodes
+                fold(t)((leaf) => Leaf(f(leaf)): Tree[B])((l, r) => Branch(l , r))
+              }
+              ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Revist `foldRightViaFoldLeft` (1)
+            ```scala
+            // case Cons(x, y) => foldLeft(y, f(z, x))(f)
+            def foldRightViaFoldLeft_1[A,B](l: List[A], t: B)(f: (A,B) => B): B =
+              foldLeft(l, (b:B) => b)((g,a) => s => g(f(a,s)))(t)
+
+            val list = List(1,2)
+            List.foldRightViaFoldLeft_1(list, Nil: List[Int])((a, b) => Cons(a, b))
+            ```
+            ```sh
+            # ->      imply, derive
+            # o: p    o as known as p
+
+            foldLeft(l, (b:B) => b)((g,a) => s => g(f(a,s)))(t)
+
+            Fr:   foldRightViaFoldLeft_1
+            K :   foldLeft
+            Fz:   (b:B) => b
+            Fa:   (g,a) => Fs
+            Fs:   (s) => g(f(a, s))
+            [1, 2, Nil] ->  Cons(1, Cons(2, Nil))
+
+            Fr([1, 2, Nil], Fz)(f)
+            K([1, 2, Nil], Fz)(Fa)(t)
+            K([2, Nil], Fa(Fz, 1))(Fa)(t)
+            K([Nil], Fa(Fa(Fz, 1), 2))(Fa)(t)
+            # cont.
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Revist `foldRightViaFoldLeft` (2)
+            ```sh
+            f :   Cons(_, _)
+            K([Nil], Fa(Fa(Fz, 1), 2))(Fa)(t)
+
+            # K match Nil return Fa(Fa(Fz, 1), 2) instead
+            Fa(Fa(Fz, 1), 2)(Fa)(t)
+
+            # expand fa by supplied (fa) definition
+            (Fa(Fz, 1), 2) => Fs
+            Fs(t) now is ((s) => Fa(Fz, 1)(f(2, s)))(t)
+            Fa(Fz, 1)(f(2, Nil))
+            Fa(Fz, 1)(Cons(2, Nil)) => Fs
+
+            (s) => (Fz(f(1, s)))(Cons(2, Nil))
+            Fz(f(1, Cons(2, Nil)))
+            Fz(Cons(1, Cons(2, Nil)))
+            Cons(1, Cons(2, Nil))
+            ```
+            ####Need `2n` time to traverse and apply `f`.
+            ####If data size is estimated that will not cause stack overflow, then directly call `foldRight` in `n` time instead.
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            #### Takeaway
+            1. Variadic function & vararg expandsion keyword
+            2. Understanding the use of underscore `_`
+            3. Parameter Type
+            4. Variance
+            5. Tail recursion optimization
+            6. Lazy evaluation through call-by-name passing
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            ## END
+          </script>
+        </section>
+      </div>
 		</div>
+
 
 		<script src="lib/js/head.min.js"></script>
 		<script src="js/reveal.js"></script>
@@ -36,6 +465,10 @@
 			// More info https://github.com/hakimel/reveal.js#configuration
 			Reveal.initialize({
 				history: true,
+        center: true,
+        width: 960,
+        height: 640,
+        transition: 'slide',
 
 				// More info https://github.com/hakimel/reveal.js#dependencies
 				dependencies: [

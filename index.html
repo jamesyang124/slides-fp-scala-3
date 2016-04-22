@@ -348,7 +348,26 @@
         </section>
         <section data-markdown>
           <script type="text/template">
-              #### Tree
+            #### Tree (1)
+            ```scala
+            // replace to other pair-wise transformation if possible
+            def fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B = t match {
+              case Leaf(a) => f(a)
+              case Branch(l, r) => g(fold(l)(f)(g), fold(r)(f)(g))
+            }
+
+            def mapFold[A, B](t: Tree[A])(f: A => B): Tree[B] = {
+              // Scala prefer sub type prior than the more general super type.
+              // So we need explicit out Leaf's type to super type
+              // Create Branch for two sub nodes
+              fold(t)((leaf) => Leaf(f(leaf)): Tree[B])((l, r) => Branch(l , r))
+            }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+              #### Tree (2)
               ```scala
               sealed trait Tree[+A]
               case class Leaf[A](value: A) extends Tree[A]
@@ -363,20 +382,6 @@
                 case Leaf(x) => x
                 case Branch(l, r) =>
                   if (maximum(l) > maximum(r)) maximum(l) else maximum(r)
-              }
-              ```
-              ```scala
-              // replace to other pair-wise transformation if possible
-              def fold[A, B](t: Tree[A])(f: A => B)(g: (B, B) => B): B = t match {
-                case Leaf(a) => f(a)
-                case Branch(l, r) => g(fold(l)(f)(g), fold(r)(f)(g))
-              }
-
-              def mapFold[A, B](t: Tree[A])(f: A => B): Tree[B] = {
-                // Scala prefer sub type prior than the more general super type.
-                // So we need explicit out Leaf's type to super type
-                // Create Branch for two sub nodes
-                fold(t)((leaf) => Leaf(f(leaf)): Tree[B])((l, r) => Branch(l , r))
               }
               ```
           </script>
